@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: leap_frog_planner
+Description: Description of leap_frog_planner
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
