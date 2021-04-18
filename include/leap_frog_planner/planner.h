@@ -10,6 +10,7 @@
 #include <cmath>
 #include "map_manager.h"
 #include <limits>
+#include "visualization_manager.h"
 
 namespace LeapFrog {
 
@@ -43,7 +44,7 @@ public:
         rrt_star = true;
     }
 
-    void getPath(int num_iterations, MapManager& Map) {
+    void getPath(int num_iterations, MapManager& Map, VisualizationManager& viz) {
         int k;
         for(k=0; k<num_iterations; k++) {
 
@@ -105,12 +106,12 @@ public:
         }
         ROS_INFO("Iteration: %i", k);
         printPath();
-        Map.prepareVizualisation(node_list, goal_node_idx, start_node_idx, target_goal_node);
+        viz.prepareVizualisation(node_list, goal_node_idx, start_node_idx, target_goal_node);
     }
 
-    void publishTree(MapManager& Map) {
-        Map.publishTrees(node_list, start_node_idx);
-    }
+//    void publishTree(VisualizationManager& viz) {
+//        viz.publishTrees(node_list, start_node_idx);
+//    }
 
 
 private:
@@ -360,7 +361,6 @@ private:
         ROS_DEBUG("\t6. Rewiring to new: %s", n_new.getNodeInfo().c_str());
 
         for(int n_near_idx: neighbour_idx_list) {
-            ROS_DEBUG("NEAR IDX: %i size: %i", n_near_idx, node_list.size());
             Node& n_near = node_list[n_near_idx];
 
             std::array<float, 2> old_n_near_cost = n_near.cost();
