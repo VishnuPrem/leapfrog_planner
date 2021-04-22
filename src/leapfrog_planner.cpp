@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv)
 {
-    if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info))
+    if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
     {
         ros::console::notifyLoggerLevelsChanged();
     }
@@ -16,7 +16,6 @@ int main(int argc, char **argv)
     srand(time(0));
     ros::init(argc, argv, "leap_frog_planner");
     ros::NodeHandle n;
-    ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
     ros::Rate loop_rate(10);
 
     LeapFrog::Position r0_s(2,-6);
@@ -27,22 +26,19 @@ int main(int argc, char **argv)
     LeapFrog::MapManager m(n);
     LeapFrog::VisualizationManager v(n);
 
-    LeapFrog::Planner planner(r0_s, r0_e, r1_s, r1_e);
-    planner.getPath(2000, m, v);
-
-    ROS_INFO("PLANNER COMPLETE");
+//    LeapFrog::Planner planner(r0_s, r0_e, r1_s, r1_e);
+//    planner.getPath(2000, m, v);
+//    ROS_INFO("PLANNER COMPLETE");
 
 
     while (ros::ok())
     {
-        v.publishTrees();
-        v.publishRobotAnim();
-        m.publishMap();
+//        v.publishTrees();
+//        v.publishRobotAnim();
 
         ros::spinOnce();
         loop_rate.sleep();
     }
 
-//    ros::spin();
     return 0;
 }

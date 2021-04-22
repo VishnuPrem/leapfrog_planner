@@ -45,6 +45,12 @@ public:
     }
 
     void getPath(int num_iterations, MapManager& Map, VisualizationManager& viz) {
+
+        if (!Map.isMapInitialized()) {
+            ROS_ERROR("Map not received");
+            return;
+        }
+
         int k;
         for(k=0; k<num_iterations; k++) {
 
