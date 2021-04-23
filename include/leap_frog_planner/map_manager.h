@@ -99,7 +99,6 @@ private:
 
     bool isCellInCollision (int x, int y) {
         int occupancy = occupancy_map[y * map_x_dim + x];
-        ROS_DEBUG("Cell (%i, %i): %i", x, y, occupancy);
         if (occupancy > 50 || occupancy == -1) {
             return true;
         } else {

@@ -16,6 +16,7 @@ public:
         viz_pub = n_h.advertise<visualization_msgs::Marker>("planner_viz", 10);
         path_anim_counter = 0;
         path_anim_timer = ros::Time::now();
+        viz_initialized = false;
     }
 
     void prepareVizualisation (std::vector<Node>& node_list_, int goal_node_idx, int start_node_idx, Node& target_goal_node) {
@@ -39,9 +40,9 @@ public:
         points.scale.y = 0.5;
         points.lifetime = ros::Duration(2);
 
+        start_goal_points.clear();
         geometry_msgs::Point p;
         p.z = 0;
-
         p.x = node_list[start_node_idx].X(0);
         p.y = node_list[start_node_idx].Y(0);
         start_goal_points.push_back(p);
@@ -55,6 +56,7 @@ public:
         p.y = target_goal_node.Y(1);
         start_goal_points.push_back(p);
 
+        start_goal_colors.clear();
         std_msgs::ColorRGBA color;
         color.a = 0.1;
         color.r = 1.0;
@@ -65,46 +67,58 @@ public:
         start_goal_colors.push_back(color);
         start_goal_colors.push_back(color);
 
+        viz_initialized = true;
     }
 
-
+    void resetVizualisation() {
+        best_path.clear();
+        path_anim_counter = 0;
+        path_anim_timer = ros::Time::now();
+        viz_initialized = false;
+    }
 
     void publishRobotAnim () {
-        if (best_path.empty()) {
+        if (!viz_initialized) {
             return;
         }
-
         ros::Duration timer_max(1);
         if (ros::Time::now() - path_anim_timer > timer_max) {
             points.points = start_goal_points;
             points.colors = start_goal_colors;
-            geometry_msgs::Point p;
-            p.x = best_path[path_anim_counter].X(0);
-            p.y = best_path[path_anim_counter].Y(0);
-            p.z = 0;
-            points.points.push_back(p);
 
-            std_msgs::ColorRGBA color;
-            color.r = 1.0;
-            color.a = 1.0;
-            points.colors.push_back(color);
+            if (!best_path.empty()) {
+                geometry_msgs::Point p;
+                p.x = best_path[path_anim_counter].X(0);
+                p.y = best_path[path_anim_counter].Y(0);
+                p.z = 0;
+                points.points.push_back(p);
 
-            p.x = best_path[path_anim_counter].X(1);
-            p.y = best_path[path_anim_counter].Y(1);
-            p.z = 0;
-            points.points.push_back(p);
+                std_msgs::ColorRGBA color;
+                color.r = 1.0;
+                color.a = 1.0;
+                points.colors.push_back(color);
 
-            color.r = 0.0;
-            color.b = 1.0;
-            points.colors.push_back(color);
+                p.x = best_path[path_anim_counter].X(1);
+                p.y = best_path[path_anim_counter].Y(1);
+                p.z = 0;
+                points.points.push_back(p);
 
-            path_anim_counter = (path_anim_counter+1) % best_path.size();
+                color.r = 0.0;
+                color.b = 1.0;
+                points.colors.push_back(color);
+
+                path_anim_counter = (path_anim_counter+1) % best_path.size();
+            }
+
             path_anim_timer = ros::Time::now();
             viz_pub.publish(points);
         }
     }
 
     void publishTrees(int start_node_idx = 0) {
+        if (!viz_initialized) {
+            return;
+        }
         publishTree(start_node_idx, "tree_mean", -1);
         publishTree(start_node_idx, "tree_robot0", 0);
         publishTree(start_node_idx, "tree_robot1", 1);
@@ -183,6 +197,7 @@ private:
     std::vector<std_msgs::ColorRGBA> start_goal_colors;
 
     std::vector<Node> node_list;
+    bool viz_initialized;
 };
 
 }

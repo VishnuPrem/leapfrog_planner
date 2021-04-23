@@ -11,6 +11,8 @@
 #include "map_manager.h"
 #include <limits>
 #include "visualization_manager.h"
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 
 namespace LeapFrog {
 
@@ -18,38 +20,31 @@ class Planner {
 
 public:
 
-    Planner(Position robot0_start_pos, Position robot0_end_pos, Position robot1_start_pos, Position robot1_end_pos) {
+    Planner(ros::NodeHandle& n_h) {
 
-        Robot robot0_start(robot0_start_pos, false);
-        Robot robot1_start(robot1_start_pos, false);
-        Node start_node(robot0_start, robot1_start);
-
-        start_node_idx = 0;
-        node_list.push_back(start_node);
-        goal_node_idx = -1;
-        goal_found = false;
-        curr_dist_to_goal = std::numeric_limits<float>::max();
-
-        target_goal_node.setX(0,robot0_end_pos.x);
-        target_goal_node.setY(0,robot0_end_pos.y);
-        target_goal_node.setX(1,robot1_end_pos.x);
-        target_goal_node.setY(1,robot1_end_pos.y);
+        start_pos_subscriber =  n_h.subscribe("/initialpose", 1000, &Planner::startPosCallback, this);
+        goal_pos_subscriber =  n_h.subscribe("/move_base_simple/goal", 1000, &Planner::goalPosCallback, this);
 
         steer_dist = 6;
-        neighbour_radius = 2;
+        neighbour_radius = 4;
         role_change_cost = 5;
-        goal_radius = 2;
-        max_interrobot_dist = 6;
+        goal_radius = 4;
+        max_interrobot_dist = 10;
         min_interrobot_dist = 1;
         rrt_star = true;
+        sample_full_map = false;
     }
 
-    void getPath(int num_iterations, MapManager& Map, VisualizationManager& viz) {
+    void Plan(int num_iterations, MapManager& Map, VisualizationManager& viz) {
 
-        if (!Map.isMapInitialized()) {
+        if(!start_initialized || !goal_initialized) {
+            return;
+        } else if (!Map.isMapInitialized()) {
             ROS_ERROR("Map not received");
             return;
         }
+        ROS_DEBUG("Start planner");
+        resetPlanner(viz);
 
         int k;
         for(k=0; k<num_iterations; k++) {
@@ -115,12 +110,50 @@ public:
         viz.prepareVizualisation(node_list, goal_node_idx, start_node_idx, target_goal_node);
     }
 
-//    void publishTree(VisualizationManager& viz) {
-//        viz.publishTrees(node_list, start_node_idx);
-//    }
-
-
 private:
+
+    void startPosCallback(geometry_msgs::PoseWithCovarianceStamped msg) {
+        ROS_INFO("Received start: %f, %f",msg.pose.pose.position.x, msg.pose.pose.position.y);
+        Position robot0_start_pos(msg.pose.pose.position.x, msg.pose.pose.position.y);
+        Position robot1_start_pos(msg.pose.pose.position.x + 2, msg.pose.pose.position.y + 2);
+        start_node.setPosition(0, robot0_start_pos);
+        start_node.setPosition(1, robot1_start_pos);
+        start_initialized = true;
+    }
+
+    void goalPosCallback(geometry_msgs::PoseStamped msg) {
+        ROS_INFO("Received goal: %f, %f",msg.pose.position.x, msg.pose.position.y);
+        Position robot0_goal_pos(msg.pose.position.x, msg.pose.position.y);
+        Position robot1_goal_pos(msg.pose.position.x + 2, msg.pose.position.y + 2);
+        target_goal_node.setPosition(0, robot0_goal_pos);
+        target_goal_node.setPosition(1, robot1_goal_pos);
+        goal_initialized = true;
+    }
+
+    void resetPlanner(VisualizationManager& viz) {
+        node_list.clear();
+        start_node_idx = 0;
+        node_list.push_back(start_node);
+
+        goal_node_idx = -1;
+        curr_dist_to_goal = std::numeric_limits<float>::max();
+        goal_found = false;
+
+        // start_initialized = false;
+        goal_initialized = false;
+        viz.resetVizualisation();
+    }
+
+    void getSampleRange (int& x_min, int& x_max, int& y_min, int& y_max, MapManager& Map) {
+        if (sample_full_map) {
+            Map.getMapRange(x_min, x_max, y_min, y_max);
+        } else {
+            x_min = std::min(std::min(start_node.X(0), start_node.X(1)), std::min(target_goal_node.X(0), target_goal_node.X(1))) - 10;
+            x_max = std::max(std::max(start_node.X(0), start_node.X(1)), std::max(target_goal_node.X(0), target_goal_node.X(1))) + 10;
+            y_min = std::min(std::min(start_node.Y(0), start_node.Y(1)), std::min(target_goal_node.Y(0), target_goal_node.Y(1))) - 10;
+            y_max = std::max(std::max(start_node.Y(0), start_node.Y(1)), std::max(target_goal_node.Y(0), target_goal_node.Y(1))) + 10;
+        }
+    }
 
     Node generateSample(int &robot_num, MapManager& Map) {
 
@@ -128,7 +161,7 @@ private:
 
         // generate float between min-max
         int x_min, x_max, y_min, y_max;
-        Map.getMapRange(x_min, x_max, y_min, y_max);
+        getSampleRange(x_min, x_max, y_min, y_max, Map);
         float x = x_min + (((float) rand()) / (float) RAND_MAX) * (x_max - x_min);
         float y = y_min + (((float) rand()) / (float) RAND_MAX) * (y_max - y_min);
         ROS_DEBUG("\t\tRandom sample: %f %f", x,y);
@@ -280,27 +313,6 @@ private:
 
         connectNodes(parent_idx, child_idx);
     }
-
-//    void assignGoal(int n_idx) {
-//        Node& n = node_list[n_idx];
-//        float dist_to_goal = (n.getDistance(0, target_goal_node) + n.getDistance(1, target_goal_node)) / 2;
-//        if (dist_to_goal < curr_dist_to_goal) {
-//            curr_dist_to_goal = dist_to_goal;
-//        }
-//        if (dist_to_goal < goal_radius) {
-//            if (goal_node_idx == -1) {
-//                goal_found = true;
-//                goal_node_idx = n_idx;
-//                curr_dist_to_goal = dist_to_goal;
-//                ROS_INFO("GOAL FOUND");
-//            }
-//            else if (dist_to_goal < curr_dist_to_goal) {
-//                goal_node_idx = n_idx;
-//                curr_dist_to_goal = dist_to_goal;
-//                ROS_INFO("GOAL UPDATED");
-//            }
-//        }
-//    }
 
     void assignGoal () {
         ROS_DEBUG("ASSINGING GOAL");
@@ -471,6 +483,7 @@ private:
     int start_node_idx;
     int goal_node_idx;
     Node target_goal_node;
+    Node start_node;
     float curr_dist_to_goal;
     std::vector<Node> node_list;
 
@@ -482,6 +495,12 @@ private:
     float min_interrobot_dist;
     bool goal_found;
     bool rrt_star;
+    bool sample_full_map;
+
+    ros::Subscriber start_pos_subscriber;
+    ros::Subscriber goal_pos_subscriber;
+    bool start_initialized;
+    bool goal_initialized;
 };
 
 }
