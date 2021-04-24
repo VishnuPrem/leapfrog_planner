@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     ROS_INFO("Planner Ready");
     while (ros::ok())
     {
-        planner.Plan(4000, m, v);
+        planner.Plan(2000, m, v);
         v.publishTrees();
         v.publishRobotAnim();
 

@@ -104,6 +104,9 @@ public:
             if (!rrt_star && goal_found) {
                 break;
             }
+            if (!ros::ok()) {
+                break;
+            }
         }
         ROS_INFO("Iteration: %i", k);
         printPath();

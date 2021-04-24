@@ -32,6 +32,9 @@ public:
         world_x_max = map_x_dim * resolution + world_x_min;
         world_y_max = map_y_dim * resolution + world_y_min;
 
+        float inflate_diameter = 0.5;
+        buildInflatedOccupancyGrid(inflate_diameter);
+
         ROS_DEBUG("Resolution: %f \nMap dims:(%i, %i) \nWorld dims [min,max] \tx: %f, %f\t y: %f %f",
                  resolution, map_x_dim, map_y_dim, world_x_min, world_x_max, world_y_min, world_y_max);
     }
@@ -98,12 +101,13 @@ public:
 private:
 
     bool isCellInCollision (int x, int y) {
-        int occupancy = occupancy_map[y * map_x_dim + x];
-        if (occupancy > 50 || occupancy == -1) {
-            return true;
-        } else {
-            return false;
-        }
+//        int occupancy = occupancy_map[y * map_x_dim + x];
+//        if (occupancy > 50 || occupancy == -1) {
+//            return true;
+//        } else {
+//            return false;
+//        }
+        return is_cell_occupied[y][x];
     }
 
     bool isPointInTriangle (Position pt, Position v1, Position v2, Position v3) {
@@ -131,6 +135,39 @@ private:
 //        y_world = y_map * resolution + world_y_min;
 //    }
 
+    bool checkForInflate(int x, int y, int num_cell_inflate) {
+        for (int i=-num_cell_inflate; i <= num_cell_inflate; i++) {
+            for (int j=-num_cell_inflate; j <= num_cell_inflate; j++) {
+                int near_x = x+i;
+                int near_y = y+j;
+                if (near_x >= 0 && near_x < map_x_dim && near_y >=0 && near_y <map_y_dim) {
+                    signed char occupancy =  occupancy_map[near_y*map_x_dim + near_x];
+                    if (occupancy > 50 || occupancy == -1) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    void buildInflatedOccupancyGrid (float inflate_diameter) {
+        int num_cell_inflate = inflate_diameter/resolution;
+        std::vector<std::vector<bool>> is_cell_occupied_(map_y_dim, std::vector<bool>(map_x_dim));
+        for (int y=0; y<map_y_dim; y++) {
+             for (int x=0; x<map_x_dim; x++) {
+                 signed char occupancy =  occupancy_map[y*map_x_dim + x];
+                 bool occupied = occupancy > 50 || occupancy == -1;
+                 bool inflate = false;
+                 if (!occupied) {
+                     inflate = checkForInflate(x,y, num_cell_inflate);
+                 }
+                 is_cell_occupied_[y][x] = occupied || inflate;
+            }
+        }
+        is_cell_occupied = is_cell_occupied_;
+    }
+
     float world_x_min;
     float world_x_max;
     float world_y_min;
@@ -141,8 +178,10 @@ private:
     int map_y_dim;
 
     std::vector<signed char> occupancy_map;
+    std::vector<std::vector<bool>> is_cell_occupied;
     ros::Subscriber map_subscriber;
     bool map_initialized;
+
 };
 
 }
