@@ -107,6 +107,11 @@ public:
             if (!ros::ok()) {
                 break;
             }
+
+            if (k%100 == 0) {
+                viz.updateVizualization(node_list);
+                viz.publishTrees();
+            }
         }
         ROS_INFO("Iteration: %i", k);
         printPath();

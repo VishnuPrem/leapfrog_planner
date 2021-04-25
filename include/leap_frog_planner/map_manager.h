@@ -32,7 +32,7 @@ public:
         world_x_max = map_x_dim * resolution + world_x_min;
         world_y_max = map_y_dim * resolution + world_y_min;
 
-        float inflate_diameter = 0.5;
+        float inflate_diameter = 0.3;
         buildInflatedOccupancyGrid(inflate_diameter);
 
         ROS_DEBUG("Resolution: %f \nMap dims:(%i, %i) \nWorld dims [min,max] \tx: %f, %f\t y: %f %f",

@@ -115,8 +115,12 @@ public:
         }
     }
 
+    void updateVizualization(std::vector<Node>& node_list_) {
+        node_list = node_list_;
+    }
+
     void publishTrees(int start_node_idx = 0) {
-        if (!viz_initialized) {
+        if (node_list.empty()) {
             return;
         }
         publishTree(start_node_idx, "tree_mean", -1);
@@ -145,7 +149,7 @@ private:
         }
         line_list.color.a = 1.0;
 
-        addTree(line_list, node_list, start_node_idx, robot_num);
+        addTree(line_list, start_node_idx, robot_num);
         viz_pub.publish(line_list);
     }
 
@@ -179,11 +183,11 @@ private:
 
     }
 
-    void addTree (visualization_msgs::Marker& line_list, std::vector<Node>& node_list, int parent_idx, int robot_num = -1) {
+    void addTree (visualization_msgs::Marker& line_list, int parent_idx, int robot_num = -1) {
         for (int i=0; i < node_list[parent_idx].getChildrenIdx().size(); i++) {
             int child_idx = node_list[parent_idx].getChildrenIdx(i);
             addEdge(line_list, node_list[parent_idx], node_list[child_idx], robot_num);
-            addTree(line_list, node_list, child_idx, robot_num);
+            addTree(line_list, child_idx, robot_num);
         }
     }
 
