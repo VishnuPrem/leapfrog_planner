@@ -22,6 +22,7 @@ namespace LeapFrog {
     const std::string ROBOT_MARKER_TOPIC = "/robot_marker";
 
     // Planner params
+    const int NUM_PLANNING_ITERATIONS = 4000;
     const float STEER_DIST = 6;
     const float NEIGHBOUR_RADIUS = 4;
     const float ROLE_CHANGE_COST = 5;

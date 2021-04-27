@@ -31,37 +31,26 @@ void robotGoalCallback (geometry_msgs::Pose msg) {
 void robotStartCallback(geometry_msgs::PoseWithCovarianceStamped msg) {
     current_pose = msg.pose.pose;
     if (robot_num == 1) {
-        current_pose.position.x += 2;
-        current_pose.position.y += 2;
+        current_pose.position.x += LeapFrog::INTERROBOT_START_OFFSET[0];
+        current_pose.position.y += LeapFrog::INTERROBOT_START_OFFSET[1];
     }
 }
 
 bool moveToGoal () {
 
     float speed = 0.02;
-    float diff_x = current_pose.position.x - goal_pose.position.x;
-    float diff_y = current_pose.position.y - goal_pose.position.y;
-    if (std::abs(diff_x) < 0.1 && std::abs(diff_y) < 0.1) {
+    float diff_x = goal_pose.position.x - current_pose.position.x;
+    float diff_y = goal_pose.position.y - current_pose.position.y;
+    float magn = std::sqrt(diff_x*diff_x + diff_y*diff_y);
+    if (magn < speed*2) {
         current_pose.position.x = goal_pose.position.x;
         current_pose.position.y = goal_pose.position.y;
         return true;
     }
 
-    if (std::abs(diff_x) > 0.1) {
-        if (diff_x > 0) {
-            current_pose.position.x -= speed;
-        } else {
-            current_pose.position.x += speed;
-        }
-    }
+    current_pose.position.x += diff_x * speed/magn;
+    current_pose.position.y += diff_y * speed/magn;
 
-    if (std::abs(diff_y) > 0.1) {
-        if (diff_y > 0) {
-            current_pose.position.y -= speed;
-        } else {
-            current_pose.position.y += speed;
-        }
-    }
     return false;
 
 }
@@ -109,7 +98,7 @@ int main(int argc, char **argv) {
     std::string node_name = std::string("robot") + std::to_string(robot_num) + std::string("_dummy_simulator");
     ros::init(argc, argv, node_name);
     ros::NodeHandle n;
-    ros::Rate loop_rate(5);
+    ros::Rate loop_rate(100);
 
     std::string goal_topic = robot_num == 0 ? LeapFrog::ROBOT0_GOAL_TOPIC : LeapFrog::ROBOT1_GOAL_TOPIC;
     std::string complete_topic = robot_num == 0 ? LeapFrog::ROBOT0_COMPLETE_TOPIC : LeapFrog::ROBOT1_COMPLETE_TOPIC;

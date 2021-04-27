@@ -60,8 +60,10 @@ public:
         return robots[robot_num].in_motion;
     }
 
-    void setInMotion(int robot_num, bool m) {
-        robots[robot_num].in_motion = m;
+    void setInMotion(int robot_num) {
+        int other_robot_num = robot_num == 0? 1 : 0;
+        robots[robot_num].in_motion = true;
+        robots[other_robot_num].in_motion = false;
     }
 
     std::array<float,2> cost() {
@@ -118,7 +120,7 @@ public:
 
     std::string getNodeInfo() {
         std::stringstream ss;
-        ss.precision(2);
+//        ss.precision(2);
         ss<<getNodePositionInfo();
         ss<<"Cost: ("<<cost(0)<<","<<cost(1)<<")\t";
         ss<<"Move: ("<<isInMotion(0)<<","<<isInMotion(1)<<")\t";
@@ -128,7 +130,7 @@ public:
 
     std::string getNodePositionInfo() {
         std::stringstream ss;
-        ss.precision(2);
+//        ss.precision(2);
         ss<<"Robot 0: ("<<X(0)<<","<<Y(0)<<")\t\t";
         ss<<"Robot 1: ("<<X(1)<<","<<Y(1)<<")\t";
         return ss.str();

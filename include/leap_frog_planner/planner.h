@@ -26,19 +26,20 @@ public:
         goal_pos_subscriber =  n_h.subscribe(PLANNER_GOAL_TOPIC, 1000, &Planner::goalPosCallback, this);
     }
 
-    void Plan(int num_iterations, MapManager& Map, VisualizationManager& viz) {
+    std::vector<Node> Plan(MapManager& Map, VisualizationManager& viz) {
 
+        std::vector<Node> best_path;
         if(!start_initialized || !goal_initialized) {
-            return;
+            return best_path;
         } else if (!Map.isMapInitialized()) {
             ROS_ERROR("Map not received");
-            return;
+            return best_path;
         }
         ROS_DEBUG("Start planner");
         resetPlanner(viz);
 
         int k;
-        for(k=0; k<num_iterations; k++) {
+        for(k=0; k<NUM_PLANNING_ITERATIONS; k++) {
 
             ROS_INFO("Iteration: %i Curr dist to goal: %f", k, curr_dist_to_goal);
             int robot_num;
@@ -107,6 +108,9 @@ public:
         ROS_INFO("Iteration: %i", k);
         printPath();
         viz.prepareVizualisation(node_list, goal_node_idx, start_node_idx, target_goal_node);
+
+        getBestPath(best_path);
+        return best_path;
     }
 
 private:
@@ -403,6 +407,7 @@ private:
                         connectNodes(n_new_idx, n_near_idx);
                         // update cost
                         n_near.setCost(updated_n_near_cost);
+                        n_near.setInMotion(moving_robot_num);
                         applyCostChange(n_near_idx, old_n_near_cost, updated_n_near_cost);
                         ROS_DEBUG("\t Rewired %s \n\t\tto: %s",
                                   n_near.getNodeInfo().c_str(),
@@ -425,7 +430,7 @@ private:
                     Position step1_fixed_pos = n_new.getPosition(step2_robot_num);
                     n_interm_candidate.setPosition(step1_robot_num, step1_move_pos);
                     n_interm_candidate.setPosition(step2_robot_num, step1_fixed_pos);
-                    n_interm_candidate.setInMotion(step1_robot_num, true);
+                    n_interm_candidate.setInMotion(step1_robot_num);
                     // check if candidate valid
                     if (isEdgeValid(step1_robot_num, n_new, n_interm_candidate, Map) && isEdgeValid(step2_robot_num, n_interm_candidate, n_near, Map)) {
                         // compute candidate interm cost
@@ -449,12 +454,13 @@ private:
                     ROS_DEBUG("\t\tBest interm node: %s", n_interm.getNodeInfo().c_str());
                     node_list.push_back(n_interm);
                     int n_interm_idx = node_list.size()-1;
-                    // connect new to interm
+                    // connect interm to new
                     connectNodes(n_new_idx, n_interm_idx);
                     // reconnect near to interm
                     disconnectNode(n_near_idx);
                     connectNodes(n_interm_idx, n_near_idx);
                     // update near cost change
+                    node_list[n_near_idx].setInMotion(best_step2_robot_num);
                     node_list[n_near_idx].setCost(best_n_near_cost);
                     applyCostChange(n_near_idx, old_n_near_cost, best_n_near_cost);
                     ROS_DEBUG("\t Rewired %s \n\t\tto: %s \n\t\tvia interm: %s",
@@ -479,10 +485,23 @@ private:
         }
     }
 
+    void getBestPath(std::vector<Node>& best_path) {
+        best_path.clear();
+        if (goal_node_idx == -1) {
+            return;
+        }
+        int n_idx = goal_node_idx;
+        while(n_idx != -1) {
+            best_path.insert(best_path.begin(), node_list[n_idx]);
+            n_idx = node_list[n_idx].getParent();
+        }
+    }
+
     int start_node_idx;
     int goal_node_idx;
     Node target_goal_node;
     Node start_node;
+    
     float curr_dist_to_goal;
     std::vector<Node> node_list;
 

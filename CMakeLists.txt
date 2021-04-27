@@ -142,6 +142,7 @@ add_executable(${PROJECT_NAME}_node
         include/leap_frog_planner/map_manager.h
         include/leap_frog_planner/visualization_manager.h
         include/leap_frog_planner/constants.h
+        include/leap_frog_planner/coordinator.h
         )
 
 ## Rename C++ executable without prefix

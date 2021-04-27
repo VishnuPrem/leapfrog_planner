@@ -2,7 +2,8 @@
 #include <sstream>
 #include <ros/console.h>
 #include "leap_frog_planner/planner.h"
-#include "leap_frog_planner/robot.h"
+#include "leap_frog_planner/node.h"
+#include "leap_frog_planner/coordinator.h"
 
 int main(int argc, char **argv)
 {
@@ -11,7 +12,6 @@ int main(int argc, char **argv)
         ros::console::notifyLoggerLevelsChanged();
     }
 
-//    srand(time(0));
     ros::init(argc, argv, "leap_frog_planner");
     ros::NodeHandle n;
     ros::Rate loop_rate(10);
@@ -19,12 +19,15 @@ int main(int argc, char **argv)
     LeapFrog::MapManager m(n);
     LeapFrog::VisualizationManager v(n);
     LeapFrog::Planner planner(n);
+    LeapFrog::Coordinator coordinator(n);
+
     ROS_INFO("Planner Ready");
     while (ros::ok())
     {
-        planner.Plan(4000, m, v);
+        std::vector<LeapFrog::Node> best_path = planner.Plan(m, v);
         v.publishTrees();
         v.publishRobotAnim();
+        coordinator.execute_path(best_path);
 
         ros::spinOnce();
         loop_rate.sleep();
