@@ -141,6 +141,7 @@ add_executable(${PROJECT_NAME}_node
         include/leap_frog_planner/robot.h
         include/leap_frog_planner/map_manager.h
         include/leap_frog_planner/visualization_manager.h
+        include/leap_frog_planner/constants.h
         )
 
 ## Rename C++ executable without prefix
@@ -157,6 +158,12 @@ add_executable(${PROJECT_NAME}_node
  target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
  )
+
+add_executable(dummy_simulator src/dummy_simulator.cpp
+        include/leap_frog_planner/constants.h)
+target_link_libraries(dummy_simulator
+        ${catkin_LIBRARIES}
+        )
 
 #############
 ## Install ##

@@ -8,6 +8,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PointStamped.h>
 #include "robot.h"
+#include "constants.h"
 
 namespace LeapFrog {
 
@@ -16,7 +17,7 @@ class MapManager {
 public:
 
     MapManager (ros::NodeHandle& n_h) {
-        map_subscriber =  n_h.subscribe("/map", 1000, &MapManager::mapSubCallback, this);
+        map_subscriber =  n_h.subscribe(MAP_TOPIC, 1000, &MapManager::mapSubCallback, this);
         map_initialized = false;
     }
 
@@ -32,8 +33,7 @@ public:
         world_x_max = map_x_dim * resolution + world_x_min;
         world_y_max = map_y_dim * resolution + world_y_min;
 
-        float inflate_diameter = 0.3;
-        buildInflatedOccupancyGrid(inflate_diameter);
+        buildInflatedOccupancyGrid();
 
         ROS_DEBUG("Resolution: %f \nMap dims:(%i, %i) \nWorld dims [min,max] \tx: %f, %f\t y: %f %f",
                  resolution, map_x_dim, map_y_dim, world_x_min, world_x_max, world_y_min, world_y_max);
@@ -151,8 +151,8 @@ private:
         return false;
     }
 
-    void buildInflatedOccupancyGrid (float inflate_diameter) {
-        int num_cell_inflate = inflate_diameter/resolution;
+    void buildInflatedOccupancyGrid () {
+        int num_cell_inflate = OBSTACLE_INFLATION_DIST/resolution;
         std::vector<std::vector<bool>> is_cell_occupied_(map_y_dim, std::vector<bool>(map_x_dim));
         for (int y=0; y<map_y_dim; y++) {
              for (int x=0; x<map_x_dim; x++) {

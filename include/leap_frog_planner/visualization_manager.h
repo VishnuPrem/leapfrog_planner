@@ -13,7 +13,7 @@ class VisualizationManager {
 
 public:
     VisualizationManager(ros::NodeHandle& n_h) {
-        viz_pub = n_h.advertise<visualization_msgs::Marker>("planner_viz", 10);
+        viz_pub = n_h.advertise<visualization_msgs::Marker>(PLANNER_VISUALIZATION_TOPIC, 10);
         path_anim_counter = 0;
         path_anim_timer = ros::Time::now();
         viz_initialized = false;

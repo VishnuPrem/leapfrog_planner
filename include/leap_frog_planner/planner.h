@@ -13,6 +13,7 @@
 #include "visualization_manager.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include "constants.h"
 
 namespace LeapFrog {
 
@@ -21,18 +22,8 @@ class Planner {
 public:
 
     Planner(ros::NodeHandle& n_h) {
-
-        start_pos_subscriber =  n_h.subscribe("/initialpose", 1000, &Planner::startPosCallback, this);
-        goal_pos_subscriber =  n_h.subscribe("/move_base_simple/goal", 1000, &Planner::goalPosCallback, this);
-
-        steer_dist = 6;
-        neighbour_radius = 4;
-        role_change_cost = 5;
-        goal_radius = 4;
-        max_interrobot_dist = 10;
-        min_interrobot_dist = 1;
-        rrt_star = true;
-        sample_full_map = false;
+        start_pos_subscriber =  n_h.subscribe(PLANNER_START_TOPIC, 1000, &Planner::startPosCallback, this);
+        goal_pos_subscriber =  n_h.subscribe(PLANNER_GOAL_TOPIC, 1000, &Planner::goalPosCallback, this);
     }
 
     void Plan(int num_iterations, MapManager& Map, VisualizationManager& viz) {
@@ -93,7 +84,7 @@ public:
                 ROS_DEBUG("\t5 . Connected: %s", node_list.back().getNodeInfo().c_str());
                 ROS_DEBUG("\t\t To: %s", node_list[n_min_idx].getNodeInfo().c_str());
 
-                if (rrt_star) {
+                if (RRT_STAR) {
                     rewireTree(node_list.size()-1, Map);
                 }
 
@@ -101,7 +92,7 @@ public:
             }
 
             // check for termination
-            if (!rrt_star && goal_found) {
+            if (!RRT_STAR && goal_found) {
                 break;
             }
             if (!ros::ok()) {
@@ -123,7 +114,7 @@ private:
     void startPosCallback(geometry_msgs::PoseWithCovarianceStamped msg) {
         ROS_INFO("Received start: %f, %f",msg.pose.pose.position.x, msg.pose.pose.position.y);
         Position robot0_start_pos(msg.pose.pose.position.x, msg.pose.pose.position.y);
-        Position robot1_start_pos(msg.pose.pose.position.x + 2, msg.pose.pose.position.y + 2);
+        Position robot1_start_pos(msg.pose.pose.position.x + INTERROBOT_START_OFFSET[0], msg.pose.pose.position.y + INTERROBOT_START_OFFSET[1]);
         start_node.setPosition(0, robot0_start_pos);
         start_node.setPosition(1, robot1_start_pos);
         start_initialized = true;
@@ -132,7 +123,7 @@ private:
     void goalPosCallback(geometry_msgs::PoseStamped msg) {
         ROS_INFO("Received goal: %f, %f",msg.pose.position.x, msg.pose.position.y);
         Position robot0_goal_pos(msg.pose.position.x, msg.pose.position.y);
-        Position robot1_goal_pos(msg.pose.position.x + 2, msg.pose.position.y + 2);
+        Position robot1_goal_pos(msg.pose.position.x + INTERROBOT_START_OFFSET[0], msg.pose.position.y + INTERROBOT_START_OFFSET[1]);
         target_goal_node.setPosition(0, robot0_goal_pos);
         target_goal_node.setPosition(1, robot1_goal_pos);
         goal_initialized = true;
@@ -153,7 +144,7 @@ private:
     }
 
     void getSampleRange (int& x_min, int& x_max, int& y_min, int& y_max, MapManager& Map) {
-        if (sample_full_map) {
+        if (SAMPLE_FULL_MAP) {
             Map.getMapRange(x_min, x_max, y_min, y_max);
         } else {
             x_min = std::min(std::min(start_node.X(0), start_node.X(1)), std::min(target_goal_node.X(0), target_goal_node.X(1))) - 10;
@@ -205,7 +196,7 @@ private:
             float dist = n.getDistance(robot_num, node_list[i]);
             Position fixed_robot_pos = node_list[i].getPosition(fixed_robot_idx);
             float fixed_dist = new_robot_pos.getDistance(fixed_robot_pos);
-            if (fixed_dist > max_interrobot_dist || fixed_dist < min_interrobot_dist) {
+            if (fixed_dist > MAX_INTERROBOT_DIST || fixed_dist < MIN_INTERROBOT_DIST) {
                 dist = std::numeric_limits<float>::max();
             }
 
@@ -231,11 +222,11 @@ private:
         for(int i=0; i<node_list.size(); i++) {
             Position fixed_robot_pos = node_list[i].getPosition(fixed_robot_idx);
             float fixed_dist = new_robot_pos.getDistance(fixed_robot_pos);
-            if (fixed_dist > max_interrobot_dist || fixed_dist < min_interrobot_dist) {
+            if (fixed_dist > MAX_INTERROBOT_DIST || fixed_dist < MIN_INTERROBOT_DIST) {
                 continue;
             }
             float dist = n.getDistance(robot_num, node_list[i]);
-            if (dist <= neighbour_radius) {
+            if (dist <= NEIGHBOUR_RADIUS) {
                 neighbours.push_back(i);
             }
         }
@@ -244,9 +235,9 @@ private:
     // steers n_new to n_old
     void steerSample(int robot_num, Node& n_new, Node& n_old) {
         float dist = n_new.getDistance(robot_num, n_old);
-        if (dist > steer_dist) {
-            float x_diff = steer_dist * (n_new.X(robot_num) - n_old.X(robot_num)) / dist;
-            float y_diff = steer_dist * (n_new.Y(robot_num) - n_old.Y(robot_num)) / dist;
+        if (dist > STEER_DIST) {
+            float x_diff = STEER_DIST * (n_new.X(robot_num) - n_old.X(robot_num)) / dist;
+            float y_diff = STEER_DIST * (n_new.Y(robot_num) - n_old.Y(robot_num)) / dist;
             float new_x = n_old.X(robot_num) + x_diff;
             float new_y = n_old.Y(robot_num) + y_diff;
             n_new.setX(robot_num, new_x);
@@ -270,7 +261,7 @@ private:
 
          // 1. AB' is within range
          float new_dist_bw_robots = fixed_robot_pos.getDistance(moving_robot_new_pos);
-         if(new_dist_bw_robots > max_interrobot_dist || new_dist_bw_robots < min_interrobot_dist) {
+         if(new_dist_bw_robots > MAX_INTERROBOT_DIST || new_dist_bw_robots < MIN_INTERROBOT_DIST) {
              ROS_DEBUG("Inter robot distance %f outside range", new_dist_bw_robots);
              return false;
          }
@@ -284,7 +275,7 @@ private:
          x2 = moving_robot_new_pos.x;
          y2 = moving_robot_new_pos.y;
          float min_dist_bw_fixed_and_moving = abs((x2-x1)*(y1-y0) - (y2-y1)*(x1-x0))/ moving_robot_old_pos.getDistance(moving_robot_new_pos);
-         if (min_dist_bw_fixed_and_moving < min_interrobot_dist) {
+         if (min_dist_bw_fixed_and_moving < MIN_INTERROBOT_DIST) {
              ROS_DEBUG("Inter robot distance %f too close during movement", min_dist_bw_fixed_and_moving);
              return false;
          }
@@ -303,7 +294,7 @@ private:
         if (n_old.isInMotion(robot_num))
            return dist;
         else
-            return dist + role_change_cost;
+            return dist + ROLE_CHANGE_COST;
     }
 
     void addNewNodeToTree(int robot_num, int child_idx, int parent_idx, float child_cost) {
@@ -330,7 +321,7 @@ private:
             float dist_to_goal = (node_list[i].getDistance(0, target_goal_node) + node_list[i].getDistance(1, target_goal_node)) / 2;
             if (dist_to_goal < min_dist) {
                 min_dist = dist_to_goal;
-                if (dist_to_goal < goal_radius) {
+                if (dist_to_goal < GOAL_RADIUS) {
                     goal_found = true;
                     goal_node_idx = i;
                 }
@@ -345,7 +336,7 @@ private:
         for (int i=0; i<node_list.size(); i++) {
             Position mean_neighbour_pos((node_list[i].X(0)+node_list[i].X(1))/2, (node_list[i].Y(0)+node_list[i].Y(1))/2);
             float dist = mean_node_pos.getDistance(mean_neighbour_pos);
-            if (dist < neighbour_radius && dist != 0) {
+            if (dist < NEIGHBOUR_RADIUS && dist != 0) {
                 neighbour_list.push_back(i);
             }
         }
@@ -495,18 +486,9 @@ private:
     float curr_dist_to_goal;
     std::vector<Node> node_list;
 
-    float steer_dist;
-    float neighbour_radius;
-    float role_change_cost;
-    float goal_radius;
-    float max_interrobot_dist;
-    float min_interrobot_dist;
-    bool goal_found;
-    bool rrt_star;
-    bool sample_full_map;
-
     ros::Subscriber start_pos_subscriber;
     ros::Subscriber goal_pos_subscriber;
+    bool goal_found;
     bool start_initialized;
     bool goal_initialized;
 };
