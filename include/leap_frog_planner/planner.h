@@ -11,7 +11,6 @@
 #include "map_manager.h"
 #include <limits>
 #include "visualization_manager.h"
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include "constants.h"
 
@@ -22,7 +21,7 @@ class Planner {
 public:
 
     Planner(ros::NodeHandle& n_h) {
-        start_pos_subscriber =  n_h.subscribe(PLANNER_START_TOPIC, 1000, &Planner::startPosCallback, this);
+        current_pos_subscriber =  n_h.subscribe(PLANNER_CURRENT_TOPIC, 1000, &Planner::currentPosCallback, this);
         goal_pos_subscriber =  n_h.subscribe(PLANNER_GOAL_TOPIC, 1000, &Planner::goalPosCallback, this);
     }
 
@@ -115,12 +114,15 @@ public:
 
 private:
 
-    void startPosCallback(geometry_msgs::PoseWithCovarianceStamped msg) {
-        ROS_INFO("Received start: %f, %f",msg.pose.pose.position.x, msg.pose.pose.position.y);
-        Position robot0_start_pos(msg.pose.pose.position.x, msg.pose.pose.position.y);
-        Position robot1_start_pos(msg.pose.pose.position.x + INTERROBOT_START_OFFSET[0], msg.pose.pose.position.y + INTERROBOT_START_OFFSET[1]);
-        start_node.setPosition(0, robot0_start_pos);
-        start_node.setPosition(1, robot1_start_pos);
+    void currentPosCallback(visualization_msgs::Marker msg) {
+        int robot_num;
+        if (msg.color.r == 1.0) {
+            robot_num = 0;
+        } else {
+            robot_num = 1;
+        }
+        Position pos(msg.points[0].x, msg.points[0].y);
+        current_pos_node.setPosition(robot_num, pos);
         start_initialized = true;
     }
 
@@ -130,6 +132,7 @@ private:
         Position robot1_goal_pos(msg.pose.position.x + INTERROBOT_START_OFFSET[0], msg.pose.position.y + INTERROBOT_START_OFFSET[1]);
         target_goal_node.setPosition(0, robot0_goal_pos);
         target_goal_node.setPosition(1, robot1_goal_pos);
+        start_node = current_pos_node;
         goal_initialized = true;
     }
 
@@ -479,10 +482,24 @@ private:
         ROS_INFO("FINAL PATH:");
         int n_idx = goal_node_idx;
         ROS_INFO("%s", target_goal_node.getNodeInfo().c_str());
+        bool move = false;
+        int move_count = 0;
+        int steps = 0;
         while(n_idx != -1) {
+            if (node_list[n_idx].getParent()!= -1) {
+                if (move != node_list[n_idx].isInMotion(0))
+                    move_count++;
+                move = node_list[n_idx].isInMotion(0);
+                steps++;
+            } else {
+                move = node_list[n_idx].isInMotion(0);
+            }
             ROS_INFO("%s", node_list[n_idx].getNodeInfo().c_str());
             n_idx = node_list[n_idx].getParent();
         }
+        ROS_INFO("Steps: %i", steps);
+        ROS_INFO("Move change count: %i", move_count-1);
+
     }
 
     void getBestPath(std::vector<Node>& best_path) {
@@ -501,11 +518,12 @@ private:
     int goal_node_idx;
     Node target_goal_node;
     Node start_node;
-    
+    Node current_pos_node;
+
     float curr_dist_to_goal;
     std::vector<Node> node_list;
 
-    ros::Subscriber start_pos_subscriber;
+    ros::Subscriber current_pos_subscriber;
     ros::Subscriber goal_pos_subscriber;
     bool goal_found;
     bool start_initialized;

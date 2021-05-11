@@ -21,6 +21,7 @@ geometry_msgs::Pose current_pose;
 int robot_num;
 bool reached = false;
 visualization_msgs::Marker position_marker;
+float speed = 0.05;
 
 void robotGoalCallback (geometry_msgs::Pose msg) {
     goal_pose = msg;
@@ -38,7 +39,6 @@ void robotStartCallback(geometry_msgs::PoseWithCovarianceStamped msg) {
 
 bool moveToGoal () {
 
-    float speed = 0.02;
     float diff_x = goal_pose.position.x - current_pose.position.x;
     float diff_y = goal_pose.position.y - current_pose.position.y;
     float magn = std::sqrt(diff_x*diff_x + diff_y*diff_y);
@@ -67,8 +67,8 @@ void initMarker() {
     position_marker.pose.orientation.w = 1.0;
     position_marker.id = 0;
     position_marker.type = visualization_msgs::Marker::POINTS;
-    position_marker.scale.x = 1;
-    position_marker.scale.y = 1;
+    position_marker.scale.x = 0.5;
+    position_marker.scale.y = 0.5;
 
     geometry_msgs::Point p;
     p.z = 0;
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
     std::string goal_topic = robot_num == 0 ? LeapFrog::ROBOT0_GOAL_TOPIC : LeapFrog::ROBOT1_GOAL_TOPIC;
     std::string complete_topic = robot_num == 0 ? LeapFrog::ROBOT0_COMPLETE_TOPIC : LeapFrog::ROBOT1_COMPLETE_TOPIC;
 
-    ros::Subscriber start_subscriber = n.subscribe(LeapFrog::PLANNER_START_TOPIC, 1000, &robotStartCallback);
+    ros::Subscriber start_subscriber = n.subscribe(LeapFrog::SIM_START_TOPIC, 1000, &robotStartCallback);
     ros::Subscriber goal_subscriber = n.subscribe(goal_topic, 1000, &robotGoalCallback);
     ros::Publisher complete_publisher = n.advertise<std_msgs::Bool>(complete_topic, 10);
     ros::Publisher marker_publisher = n.advertise<visualization_msgs::Marker>(LeapFrog::ROBOT_MARKER_TOPIC, 10);
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
 
     while (ros::ok()) {
 
-        ROS_INFO("Current pose: (%f,%f) \tGoal pose: (%f,%f) \tGoal reached: %d", current_pose.position.x, current_pose.position.y,
+        ROS_INFO("Current: (%f,%f) Goal: (%f,%f) Reached: %d", current_pose.position.x, current_pose.position.y,
                  goal_pose.position.x, goal_pose.position.y, reached);
 
         if (!reached) {
