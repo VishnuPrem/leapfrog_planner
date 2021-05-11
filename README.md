@@ -15,9 +15,9 @@ In seperate terminals, run:
 $ roscore
 $ rviz
 $ rosrun map_server map_server map/pennov4.yaml 
-$ rosrun leap_frog_plaer leap_frog_planner_node 
-$ rosrun leap_frog_plaer dummy_simulator 0
-$ rosrun leap_frog_plaer dummy_simulator 1
+$ rosrun leap_frog_planner leap_frog_planner_node 
+$ rosrun leap_frog_planner dummy_simulator 0
+$ rosrun leap_frog_planner dummy_simulator 1
 ```
 Open rviz using the configuration in ./leapfrog_config.rviz
 
