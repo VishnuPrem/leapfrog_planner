@@ -10,20 +10,25 @@ the path planning aspect of leapfrogging i.e. an algorithm to generate a path fo
 robots can generate thebest possible estimate of the map and their own position.
 
 ## Usage
-In seperate terminals, run:
+Publish a map
 ```
-$ roscore
-$ rviz
 $ rosrun map_server map_server map/pennov4.yaml 
+```
+Start the leapfrog planner 
+```
 $ rosrun leap_frog_planner leap_frog_planner_node 
+```
+Run the dummy simulators for both the robots
+```
 $ rosrun leap_frog_planner dummy_simulator 0
 $ rosrun leap_frog_planner dummy_simulator 1
 ```
-Open rviz using the configuration in ./leapfrog_config.rviz
 
-In rviz, set a 2D Pose Estimate marker to initialise the simulators.
+Open rviz and use the configuration in ./leapfrog_config.rviz
 
-In rviz, set a 2D Nav Goal marker to initiate the planner.
+In rviz, set a 2D Pose Estimate marker to initialise the position of the robots.
 
-Once the plan is generated, the robots will move along the planned path. Once the goal is reached, a new 2D Nav Goal marker can be dropped to restart the planner
+In rviz, set a 2D Nav Goal marker to assign a goal for the planner. This will start the planning cycle as well.
+
+Once the plan is generated, the robots will move along the planned path. Once the robots arrive at the goal, a new 2D Nav Goal marker can be selected to restart the planner with the current position as the start position.
 
