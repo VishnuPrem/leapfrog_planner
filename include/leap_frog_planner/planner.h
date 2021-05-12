@@ -35,6 +35,7 @@ public:
             return best_path;
         }
         ROS_DEBUG("Start planner");
+        ros::Time planner_start_time = ros::Time::now();
         resetPlanner(viz);
 
         int k;
@@ -104,9 +105,11 @@ public:
                 viz.publishTrees();
             }
         }
+        ros::Duration planner_run_time = ros::Time::now() - planner_start_time;
         ROS_INFO("Iteration: %i", k);
         printPath();
         viz.prepareVizualisation(node_list, goal_node_idx, start_node_idx, target_goal_node);
+        ROS_INFO("Run time: %f", planner_run_time.toSec());
 
         getBestPath(best_path);
         return best_path;

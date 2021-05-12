@@ -86,29 +86,29 @@ public:
             points.points = start_goal_points;
             points.colors = start_goal_colors;
 
-            if (!best_path.empty()) {
-                geometry_msgs::Point p;
-                p.x = best_path[path_anim_counter].X(0);
-                p.y = best_path[path_anim_counter].Y(0);
-                p.z = 0;
-                points.points.push_back(p);
-
-                std_msgs::ColorRGBA color;
-                color.r = 1.0;
-                color.a = 1.0;
-                points.colors.push_back(color);
-
-                p.x = best_path[path_anim_counter].X(1);
-                p.y = best_path[path_anim_counter].Y(1);
-                p.z = 0;
-                points.points.push_back(p);
-
-                color.r = 0.0;
-                color.b = 1.0;
-                points.colors.push_back(color);
-
-                path_anim_counter = (path_anim_counter+1) % best_path.size();
-            }
+//            if (!best_path.empty()) {
+//                geometry_msgs::Point p;
+//                p.x = best_path[path_anim_counter].X(0);
+//                p.y = best_path[path_anim_counter].Y(0);
+//                p.z = 0;
+//                points.points.push_back(p);
+//
+//                std_msgs::ColorRGBA color;
+//                color.r = 1.0;
+//                color.a = 1.0;
+//                points.colors.push_back(color);
+//
+//                p.x = best_path[path_anim_counter].X(1);
+//                p.y = best_path[path_anim_counter].Y(1);
+//                p.z = 0;
+//                points.points.push_back(p);
+//
+//                color.r = 0.0;
+//                color.b = 1.0;
+//                points.colors.push_back(color);
+//
+//                path_anim_counter = (path_anim_counter+1) % best_path.size();
+//            }
 
             path_anim_timer = ros::Time::now();
             viz_pub.publish(points);
